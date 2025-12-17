@@ -8,7 +8,7 @@ CITYMAP_SIMPLE
 │
 ├── map
 │   ├── map_view.py
-│   ├── mask_layer.py
+│   ├── mask_layer.py        #Reserved for future mask-based layouts
 │   └── styles.py
 │
 └── services

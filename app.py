@@ -10,6 +10,12 @@ from map.map_view import render_map
 from map.styles import PRESETS
 
 # ======================
+# Session state (rerender trigger)
+# ======================
+if "rerender" not in st.session_state:
+    st.session_state.rerender = 0
+
+# ======================
 # Page config
 # ======================
 st.set_page_config(
@@ -31,13 +37,17 @@ def distance_m(lat1, lon1, lat2, lon2):
     )
 
 # ======================
-# Sidebar (LIVE controls)
+# Sidebar
 # ======================
 with st.sidebar:
     city = st.text_input("City / ZIP - Code", "Lugano")
     radius = st.slider("Radius (meters)", 500, 2500, 1200)
 
     preset_name = st.selectbox("Style Preset", PRESETS.keys())
+
+    if st.button("Apply preset", type="primary"):
+        st.session_state.rerender += 1
+
     style = copy.deepcopy(PRESETS[preset_name])
 
     st.subheader("Point of Interest")
@@ -97,7 +107,7 @@ with st.sidebar:
                 )
 
 # ======================
-# Data loading (LIVE)
+# Data loading
 # ======================
 @st.cache_data
 def load_data(city, radius):
@@ -109,13 +119,11 @@ def load_data(city, radius):
 try:
     lat, lon, name, osm, pois = load_data(city, radius)
 
-    # --- Filter POIs ---
     filtered_pois = [
         p for p in pois
         if show_categories.get(p["category"], False)
     ]
 
-    # --- Render map ---
     render_map(
         lat=lat,
         lon=lon,
@@ -124,42 +132,25 @@ try:
         style=style,
         radius=radius,
         title=name,
+        rerender_key=st.session_state.rerender,
     )
 
-    # ======================
-    # POI TABLE (instead of list)
-    # ======================
     if show_poi_list and filtered_pois:
         st.markdown("### Selected places")
 
-        table_rows = []
+        rows = []
         for poi in filtered_pois:
             dist = distance_m(lat, lon, poi["lat"], poi["lon"])
-
-            icon = {
-                "Restaurant": "☕",
-                "Historic": "🏛️",
-                "Museum": "🖼️",
-                "Nature": "🌿",
-                "Attraction": "📍",
-            }.get(poi["category"], "📍")
-
-            table_rows.append(
+            rows.append(
                 {
-                    "": icon,
                     "Name": poi["name"],
                     "Category": poi["category"],
-                    "Distance (m) from center": dist,
+                    "Distance (m)": dist,
                 }
             )
 
-        df = pd.DataFrame(table_rows)
-
-        st.dataframe(
-            df,
-            use_container_width=True,
-            hide_index=True,
-        )
+        df = pd.DataFrame(rows)
+        st.dataframe(df, use_container_width=True, hide_index=True)
 
 except Exception:
     st.info("Enter a valid city to see the map.")

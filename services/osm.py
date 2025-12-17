@@ -1,4 +1,10 @@
-#services/osm.py
+"""
+osm.py
+
+Fetches geometric map data from OpenStreetMap
+using the Overpass API.
+"""
+
 import requests
 import time
 
@@ -24,6 +30,7 @@ def fetch_osm(lat, lon, radius):
     out geom;
     """
 
+    data = None
     for url in URLS:
         try:
             r = requests.post(url, data=query, headers=HEADERS, timeout=30)
@@ -31,7 +38,7 @@ def fetch_osm(lat, lon, radius):
             data = r.json()
             break
         except Exception:
-            data = None
+            pass
 
     if not data:
         return {k: [] for k in ["building", "water", "green", "road"]}
@@ -41,6 +48,7 @@ def fetch_osm(lat, lon, radius):
     for el in data.get("elements", []):
         if el["type"] != "way":
             continue
+
         coords = [[p["lon"], p["lat"]] for p in el["geometry"]]
         tags = el.get("tags", {})
 

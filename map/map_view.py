@@ -14,6 +14,7 @@ def calculate_zoom(radius):
 def render_map(lat, lon, osm, pois, style, radius, title, rerender_key):
     layers = []
 
+    # --- Polygons ---
     for key in ["water", "green", "building"]:
         layers.append(
             pdk.Layer(
@@ -23,9 +24,11 @@ def render_map(lat, lon, osm, pois, style, radius, title, rerender_key):
                 get_fill_color=style[key]["color"],
                 opacity=style[key].get("opacity", 1),
                 stroked=False,
+                id=f"{key}_{rerender_key}",  # <<< CRITICAL FIX
             )
         )
 
+    # --- Roads ---
     layers.append(
         pdk.Layer(
             "PathLayer",
@@ -35,9 +38,11 @@ def render_map(lat, lon, osm, pois, style, radius, title, rerender_key):
             get_width=style["road"]["width"],
             width_scale=1,
             width_min_pixels=1,
+            id=f"road_{rerender_key}",  # <<< CRITICAL FIX
         )
     )
 
+    # --- POIs ---
     if pois:
         layers.append(
             pdk.Layer(
@@ -48,6 +53,7 @@ def render_map(lat, lon, osm, pois, style, radius, title, rerender_key):
                 get_fill_color=style["poi"]["color"],
                 pickable=True,
                 opacity=0.9,
+                id=f"poi_{rerender_key}",  # <<< CRITICAL FIX
             )
         )
 
@@ -66,10 +72,10 @@ def render_map(lat, lon, osm, pois, style, radius, title, rerender_key):
     st.pydeck_chart(
         deck,
         use_container_width=True,
-        key=f"map_{rerender_key}",
+        key=f"deck_{rerender_key}",  # secondary safety
     )
 
     st.markdown(
         f"<h2 style='text-align:center'>{title}</h2>",
-        unsafe_allow_html=True
+        unsafe_allow_html=True,
     )

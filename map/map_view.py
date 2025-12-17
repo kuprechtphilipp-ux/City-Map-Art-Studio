@@ -11,10 +11,9 @@ def calculate_zoom(radius):
     else:
         return 12
 
-def render_map(lat, lon, osm, pois, style, radius, title):
+def render_map(lat, lon, osm, pois, style, radius, title, rerender_key):
     layers = []
 
-    # --- Polygons ---
     for key in ["water", "green", "building"]:
         layers.append(
             pdk.Layer(
@@ -27,7 +26,6 @@ def render_map(lat, lon, osm, pois, style, radius, title):
             )
         )
 
-    # --- Roads ---
     layers.append(
         pdk.Layer(
             "PathLayer",
@@ -40,7 +38,6 @@ def render_map(lat, lon, osm, pois, style, radius, title):
         )
     )
 
-    # --- POIs ---
     if pois:
         layers.append(
             pdk.Layer(
@@ -69,6 +66,10 @@ def render_map(lat, lon, osm, pois, style, radius, title):
     st.pydeck_chart(
         deck,
         use_container_width=True,
-        key=str(style)
+        key=f"map_{rerender_key}",
     )
-    st.markdown(f"<h2 style='text-align:center'>{title}</h2>", unsafe_allow_html=True)
+
+    st.markdown(
+        f"<h2 style='text-align:center'>{title}</h2>",
+        unsafe_allow_html=True
+    )

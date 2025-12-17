@@ -66,5 +66,9 @@ def render_map(lat, lon, osm, pois, style, radius, title):
         tooltip={"text": "{name}"},
     )
 
-    st.pydeck_chart(deck, use_container_width=True)
+    st.pydeck_chart(
+        deck,
+        use_container_width=True,
+        key=str(style)
+    )
     st.markdown(f"<h2 style='text-align:center'>{title}</h2>", unsafe_allow_html=True)

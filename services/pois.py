@@ -1,3 +1,10 @@
+"""
+pois.py
+
+Fetches points of interest (POIs) from OpenStreetMap
+and assigns simple categories.
+"""
+
 import requests
 import time
 

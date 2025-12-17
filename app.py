@@ -1,3 +1,11 @@
+"""
+app.py
+
+Main entry point of the City Map Art Studio web app.
+Handles UI layout, user interaction, preset application,
+data loading, and map rendering.
+"""
+
 import streamlit as st
 import copy
 import math
@@ -12,6 +20,8 @@ from map.styles import PRESETS
 # ======================
 # Session state
 # ======================
+# rerender: forces a full PyDeck redraw (important for Streamlit Cloud)
+# applied_preset: currently active style preset
 if "rerender" not in st.session_state:
     st.session_state.rerender = 0
 
@@ -29,9 +39,10 @@ st.set_page_config(
 st.title("City Map Art Studio")
 
 # ======================
-# Helper
+# Helper functions
 # ======================
 def distance_m(lat1, lon1, lat2, lon2):
+    """Approximate distance in meters between two coordinates."""
     return int(
         math.sqrt(
             ((lat1 - lat2) * 111_320) ** 2 +
@@ -40,6 +51,11 @@ def distance_m(lat1, lon1, lat2, lon2):
     )
 
 def reset_style_widget_states():
+    """
+    Removes widget states for colors, sliders etc.
+    This ensures that a newly applied preset is not overwritten
+    by previous fine-tuning values.
+    """
     for layer in ["building", "water", "green", "road", "poi"]:
         for suffix in ["color", "opacity", "width", "size"]:
             key = f"{layer}_{suffix}"
@@ -55,12 +71,13 @@ with st.sidebar:
 
     preset_name = st.selectbox("Style Preset", PRESETS.keys())
 
+    # Explicitly apply a preset to avoid Streamlit Cloud state issues
     if st.button("Apply preset", type="primary"):
         st.session_state.applied_preset = preset_name
         reset_style_widget_states()
         st.session_state.rerender += 1
 
-    # style is ALWAYS derived from the applied preset
+    # Style is always derived from the applied preset
     style = copy.deepcopy(PRESETS[st.session_state.applied_preset])
 
     st.subheader("Point of Interest")
@@ -76,6 +93,7 @@ with st.sidebar:
 
     st.subheader("Fine tuning")
 
+    # Live style customization
     for layer in ["building", "water", "green", "road", "poi"]:
         with st.expander(layer.capitalize()):
             if "color" in style[layer]:
@@ -85,9 +103,7 @@ with st.sidebar:
 
             if "opacity" in style[layer]:
                 style[layer]["opacity"] = st.slider(
-                    "Opacity",
-                    0.1,
-                    1.0,
+                    "Opacity", 0.1, 1.0,
                     float(style[layer]["opacity"]),
                     0.05,
                     key=f"{layer}_opacity",
@@ -95,9 +111,7 @@ with st.sidebar:
 
             if "width" in style[layer]:
                 style[layer]["width"] = st.slider(
-                    "Width",
-                    1,
-                    6,
+                    "Width", 1, 6,
                     style[layer]["width"],
                     1,
                     key=f"{layer}_width",
@@ -105,9 +119,7 @@ with st.sidebar:
 
             if "size" in style[layer]:
                 style[layer]["size"] = st.slider(
-                    "Size",
-                    20,
-                    200,
+                    "Size", 20, 200,
                     style[layer]["size"],
                     10,
                     key=f"{layer}_size",
@@ -118,6 +130,7 @@ with st.sidebar:
 # ======================
 @st.cache_data
 def load_data(city, radius):
+    """Fetches geocoding, OSM geometry and POIs."""
     lat, lon, name = geocode_city(city)
     osm = fetch_osm(lat, lon, radius)
     pois = fetch_pois(lat, lon, radius)
@@ -145,15 +158,14 @@ try:
     if show_poi_list and filtered_pois:
         st.markdown("### Selected places")
 
-        rows = []
-        for poi in filtered_pois:
-            rows.append(
-                {
-                    "Name": poi["name"],
-                    "Category": poi["category"],
-                    "Distance (m)": distance_m(lat, lon, poi["lat"], poi["lon"]),
-                }
-            )
+        rows = [
+            {
+                "Name": poi["name"],
+                "Category": poi["category"],
+                "Distance (m)": distance_m(lat, lon, poi["lat"], poi["lon"]),
+            }
+            for poi in filtered_pois
+        ]
 
         df = pd.DataFrame(rows)
         st.dataframe(df, use_container_width=True, hide_index=True)

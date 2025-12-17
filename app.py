@@ -10,10 +10,13 @@ from map.map_view import render_map
 from map.styles import PRESETS
 
 # ======================
-# Session state (rerender trigger)
+# Session state
 # ======================
 if "rerender" not in st.session_state:
     st.session_state.rerender = 0
+
+if "applied_preset" not in st.session_state:
+    st.session_state.applied_preset = list(PRESETS.keys())[0]
 
 # ======================
 # Page config
@@ -36,6 +39,13 @@ def distance_m(lat1, lon1, lat2, lon2):
         )
     )
 
+def reset_style_widget_states():
+    for layer in ["building", "water", "green", "road", "poi"]:
+        for suffix in ["color", "opacity", "width", "size"]:
+            key = f"{layer}_{suffix}"
+            if key in st.session_state:
+                del st.session_state[key]
+
 # ======================
 # Sidebar
 # ======================
@@ -46,9 +56,12 @@ with st.sidebar:
     preset_name = st.selectbox("Style Preset", PRESETS.keys())
 
     if st.button("Apply preset", type="primary"):
+        st.session_state.applied_preset = preset_name
+        reset_style_widget_states()
         st.session_state.rerender += 1
 
-    style = copy.deepcopy(PRESETS[preset_name])
+    # style is ALWAYS derived from the applied preset
+    style = copy.deepcopy(PRESETS[st.session_state.applied_preset])
 
     st.subheader("Point of Interest")
     show_categories = {
@@ -66,15 +79,9 @@ with st.sidebar:
     for layer in ["building", "water", "green", "road", "poi"]:
         with st.expander(layer.capitalize()):
             if "color" in style[layer]:
-                hex_color = "#{:02x}{:02x}{:02x}".format(*style[layer]["color"])
-                picked = st.color_picker(
-                    "Color",
-                    hex_color,
-                    key=f"{layer}_color",
-                )
-                style[layer]["color"] = [
-                    int(picked[i:i+2], 16) for i in (1, 3, 5)
-                ]
+                default_hex = "#{:02x}{:02x}{:02x}".format(*style[layer]["color"])
+                picked = st.color_picker("Color", default_hex, key=f"{layer}_color")
+                style[layer]["color"] = [int(picked[i:i+2], 16) for i in (1, 3, 5)]
 
             if "opacity" in style[layer]:
                 style[layer]["opacity"] = st.slider(
@@ -140,12 +147,11 @@ try:
 
         rows = []
         for poi in filtered_pois:
-            dist = distance_m(lat, lon, poi["lat"], poi["lon"])
             rows.append(
                 {
                     "Name": poi["name"],
                     "Category": poi["category"],
-                    "Distance (m)": dist,
+                    "Distance (m)": distance_m(lat, lon, poi["lat"], poi["lon"]),
                 }
             )
 
